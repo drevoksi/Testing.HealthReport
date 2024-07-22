@@ -92,5 +92,3 @@ for (int day = 0; day < daysToReport; day++)
     var entry = log[day];
     Console.WriteLine($"{service} {entry.Item1.ToShortDateString()} " + (entry.Item2 != null ? $"{(int)((TimeSpan)entry.Item2).TotalHours + ((TimeSpan)entry.Item2).ToString(@"\:mm\:ss")} {entry.Item3:0.00%} {entry.Item4:0.00%} {entry.Item5:0.00%}" : "Unavailable"));
 }
-
-Console.ReadLine();
