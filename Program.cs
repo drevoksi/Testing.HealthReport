@@ -18,11 +18,13 @@ var healthData = new List<HealthDataItem>()
 };
 
 const int daysToReport = 14;
+const string service = "Service1";
 
 DateTime reportStartDate = dateProvider.OffsetNow.AddDays(1 - daysToReport).Date;
 DateTime reportEndDate = dateProvider.OffsetNow.Date;
 
 // Creating a health status record for each day to report
+healthData = healthData.Where(x => x.Service == service).ToList();
 var dataOnDay = new List<HealthDataItem>[daysToReport];
 for (int i = 0; i < daysToReport; i++)
     dataOnDay[i] = new ();
@@ -39,7 +41,7 @@ for (int i = 0; i < healthData.Count; i++)
 }
 
 // Combining daily records into logs
-var log = new(string, DateTime, TimeSpan, double, double, double)?[daysToReport];
+var log = new(DateTime, TimeSpan?, double?, double?, double?)[daysToReport];
 for (int day = 0; day < daysToReport; day++)
 {
     DateTime dayStart = reportStartDate.AddDays(day).Date;
@@ -47,9 +49,12 @@ for (int day = 0; day < daysToReport; day++)
     int daySeconds = (int)(dayEnd - dayStart).TotalSeconds;
 
     var dataEntries = dataOnDay[day];
-    if (dataEntries.Count == 0) continue;
+    if (dataEntries.Count == 0)
+    {
+        log[day] = (dayStart, null, null, null, null);
+        continue;
+    }
 
-    string service = dataEntries[0].Service;
     DateTime date = dayStart;
     TimeSpan uptime = TimeSpan.Zero;
     TimeSpan unhealthyTime = TimeSpan.Zero;
@@ -75,19 +80,17 @@ for (int day = 0; day < daysToReport; day++)
 
     double unhealthyPercent = unhealthyTime.TotalSeconds / daySeconds;
     double degradedPercent = degradedTime.TotalSeconds / daySeconds;
-    double uptimePercent = 1 - unhealthyPercent - degradedPercent;
+    double uptimePercent = uptime.TotalSeconds / daySeconds;
 
-    log[day] = (service, date, uptime, uptimePercent, unhealthyPercent, degradedPercent);
+    log[day] = (date, uptime, uptimePercent, unhealthyPercent, degradedPercent);
 }
 
 // Printing out the logs
+Console.WriteLine($"Report for past {daysToReport} days for {service}");
 for (int day = 0; day < daysToReport; day++)
 {
-    if (log[day] == null)
-    {
-        Console.WriteLine("Unavailable");
-        continue;
-    }
-    var entry = log[day] ?? default;
-    Console.WriteLine($"{entry.Item1} {entry.Item2.ToShortDateString()} {entry.Item3} {entry.Item4:0.0%} {entry.Item5:0.0%} {entry.Item6:0.0%}");
+    var entry = log[day];
+    Console.WriteLine($"{service} {entry.Item1.ToShortDateString()} " + (entry.Item2 != null ? $"{(int)((TimeSpan)entry.Item2).TotalHours + ((TimeSpan)entry.Item2).ToString(@"\:mm\:ss")} {entry.Item3:0.00%} {entry.Item4:0.00%} {entry.Item5:0.00%}" : "Unavailable"));
 }
+
+Console.ReadLine();
